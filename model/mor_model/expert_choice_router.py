@@ -93,7 +93,11 @@ class MoRLlamaDecoderLayer(nn.Module):
         
         torch_dtype = get_torch_dtype(cfg)
         for blk in self.block:
-            blk.self_attn = MoRLlamaAttention(config, blk.self_attn.layer_idx).to(torch_dtype)
+            attn = MoRLlamaAttention(config, blk.self_attn.layer_idx).to(torch_dtype)
+            # Reuse the projections to preserve their weights and parameter sharing.
+            for name in ("q_proj", "k_proj", "v_proj", "o_proj"):
+                setattr(attn, name, getattr(blk.self_attn, name))
+            blk.self_attn = attn
 
         self.training_step = 0
         
